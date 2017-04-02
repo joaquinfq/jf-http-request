@@ -1,0 +1,29 @@
+{
+    "version"      : "0.1.0",
+    "name"         : "jf-http-request",
+    "author"       : "Joaquín Fernández",
+    "description"  : "Simple wrapper for NodeJS HTTP request. Use promises, events or callbacks.",
+    "keywords"     : [
+        "ajax",
+        "callback",
+        "callbacks",
+        "event",
+        "events",
+        "http",
+        "promise",
+        "promises",
+        "request"
+    ],
+    "license"      : "MIT",
+    "homepage"     : "http://www.joaquinfernandez.net",
+    "repository"   : {
+        "type" : "git",
+        "url"  : "https://github.com/joaquinfq/jf-http-request"
+    },
+    "scripts"      : {
+        "test" : "node test"
+    },
+    "dependencies" : {
+        "jf-http-headers" : "^0.1.0"
+    }
+}
