@@ -1,5 +1,7 @@
 # jf-http-request [![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges)
 
+[![npm install jf-http-request](https://nodei.co/npm/jf-http-request.png?mini=true)](https://npmjs.org/package/jf-http-request/)
+
 Simple wrapper for NodeJS HTTP request.
 
 ## Options
@@ -33,7 +35,7 @@ There are three types of responses:
 
 ## Request types:
 
-With parameter `type` you can change value returned (default: `events`).
+With parameter `requestType` you can change value returned (default: `events`).
 
 ### Using callbacks
 
