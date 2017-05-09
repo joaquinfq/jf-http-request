@@ -1,7 +1,66 @@
+const crypto        = require('crypto');
 const Events        = require('events');
-const jfHttpHeaders = require('jf-http-headers');
-const httpRequest   = require('http').request;
+const fs            = require('fs');
 const urlParse      = require('url').parse;
+const jfHttpHeaders = require('jf-http-headers');
+const http          = require('http');
+const HttpMessage   = http.IncomingMessage;
+const httpRequest   = http.request;
+const httpsRequest  = require('https').request;
+/**
+ * Caché de peticiones realizadas.
+ *
+ * @type {Object}
+ */
+const cache         = {};
+/**
+ * Propiedades de la respuesta que se serializarán.
+ *
+ * @type {String[]}
+ */
+const properties    = [
+    'body',
+    'headers',
+    'httpVersion',
+    'httpVersionMajor',
+    'httpVersionMinor',
+    'method',
+    'rawHeaders',
+    'rawTrailers',
+    'statusCode',
+    'statusMessage',
+    'trailers',
+    'url'
+];
+/**
+ * Agrega al cache una respuesta obtenida del servidor.
+ *
+ * @param {String} hash     Hash a usar como clave del cache.
+ * @param {Number} time     Tiempo de duración en caché de los datos.
+ * @param {*}      response Respuesta a almacenar en caché.
+ */
+function addToCache(hash, time, response)
+{
+    purgeCache();
+    // Serializamos la respuesta para evitar referencias circulares y para crear una copia.
+    const _serialized = {};
+    properties.forEach(name => _serialized[name] = response[name]);
+    cache[hash] = {
+        data : _serialized,
+        time : new Date().getTime() + time
+    };
+}
+/**
+ * Crea un hash a usar como clave del caché a partir del contenido especificado.
+ *
+ * @param {String} content Contenido a usar para generar el caché.
+ *
+ * @return {String} Hash del contenido.
+ */
+function buildHash(content)
+{
+    return crypto.createHash('sha256').update(content).digest('hex');
+}
 /**
  * Verifica los encabezados de la petición.
  * Usa la clase `jfHttpHeaders` para normalizar los nombres.
@@ -78,41 +137,85 @@ function checkUrl(options)
  */
 function doRequest(options, ok, error)
 {
-    const _request = httpRequest(
-        options,
-        response =>
-        {
-            const _chunks = [];
-            response.on('data', chunk => _chunks.push(chunk));
-            response.on(
-                'end',
-                () => {
-                    let _body = _chunks.join('');
-                    const _contentType = new jfHttpHeaders(response.headers).get('Content-Type');
-                    // application/json, application/vnd.api+json, text/json, etc.
-                    if ((/[+/]json(;|$)/).test(_contentType))
-                    {
-                        try
-                        {
-                            _body = JSON.parse(_body);
-                        }
-                        catch (e)
-                        {
-                            _body = {};
-                        }
-                    }
-                    response.body = _body;
-                    ok(response)
-                }
-            );
-        }
-    );
-    _request.on('error', err => error(err));
-    if ('body' in options)
+    const _cacheTime = options.cacheTime || 100000;
+    let _hash;
+    let _response;
+    if (_cacheTime)
     {
-        _request.write(options.body, 'utf8');
+        _hash     = buildHash(JSON.stringify(options));
+        _response = fromCache(_hash);
     }
-    _request.end();
+    if (_response)
+    {
+        ok(_response);
+    }
+    else
+    {
+        const _httpRequest = options.protocol === 'https:'
+            ? httpsRequest
+            : httpRequest;
+        const _request     = _httpRequest(
+            options,
+            response =>
+            {
+                const _chunks = [];
+                response.on('data', chunk => _chunks.push(chunk));
+                response.on(
+                    'end',
+                    () =>
+                    {
+                        let _body          = _chunks.join('');
+                        const _contentType = new jfHttpHeaders(response.headers).get('Content-Type');
+                        // application/json, application/vnd.api+json, text/json, etc.
+                        if ((/[+/]json(;|$)/).test(_contentType))
+                        {
+                            try
+                            {
+                                _body = JSON.parse(_body);
+                            }
+                            catch (e)
+                            {
+                                _body = {};
+                            }
+                        }
+                        response.body = _body;
+                        if (_hash)
+                        {
+                            addToCache(_hash, _cacheTime, response);
+                        }
+                        ok(response)
+                    }
+                );
+            }
+        );
+        _request.on('error', err => error(err));
+        if ('body' in options)
+        {
+            _request.write(options.body, 'utf8');
+        }
+        _request.end();
+    }
+}
+/**
+ * Obtiene del caché una respuesta previamente almacenada.
+ * Purga las respuestas caducadas.
+ *
+ * @param {String} hash Hash a usar como clave del cache.
+ *
+ * @return {http.IncomingMessage|undefined} Respuesta del caché o `undefined` si no existe.
+ */
+function fromCache(hash)
+{
+    let _response;
+    purgeCache();
+    const _data = cache[hash];
+    if (_data)
+    {
+        const _values = _data.data;
+        _response     = new HttpMessage();
+        properties.forEach(name => _response[name] = _values[name]);
+    }
+    return _response;
 }
 /**
  * Indica si la petición ha finalizado exitosamente o no.
@@ -124,6 +227,22 @@ function isOk(response)
 {
     const _code = (response && response.statusCode) || 0;
     return (_code >= 200 && _code < 300) || _code === 304;
+}
+/**
+ * Purga el contenido caducado del caché.
+ */
+function purgeCache()
+{
+    const _current = new Date().getTime();
+    Object.keys(cache).forEach(
+        key =>
+        {
+            if (cache[key].time < _current)
+            {
+                delete cache[key];
+            }
+        }
+    );
 }
 /**
  * Realiza la petición usando un callback para indicar cuando termine.
@@ -238,4 +357,26 @@ module.exports = function jfHttpRequest(options)
         throw new TypeError('Wrong options');
     }
     return _result;
+};
+module.exports.cache = cache;
+/**
+ * Carga el caché desde un archivo.
+ *
+ * @param {String} file Ruta del archivo del caché.
+ */
+module.exports.loadCache = file =>
+{
+    if (fs.existsSync(file))
+    {
+        Object.assign(cache, require(file));
+    }
+};
+/**
+ * Carga el caché desde un archivo.
+ *
+ * @param {String} file Ruta del archivo del caché.
+ */
+module.exports.writeCache = file =>
+{
+    fs.writeFileSync(file, JSON.stringify(cache), 'utf8');
 };

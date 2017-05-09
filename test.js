@@ -35,7 +35,8 @@ function testCallback()
         ([ code, url ]) => jfHttpRequest(
             {
                 url         : url,
-                requestType : (response, type) => {
+                requestType : (response, type) =>
+                {
                     if (type === 'request-error')
                     {
                         checkError(response);
@@ -53,20 +54,17 @@ function testCallback()
 function testEvent()
 {
     urls.forEach(
-        ([ code, url ]) => {
-            jfHttpRequest(url)
-                .on('request-error', error    => checkError(error))
-                .on('request-fail',  response => check(response, code))
-                .on('request-ok',    response => check(response, code));
-        }
+        ([ code, url ]) => jfHttpRequest(url)
+            .on('request-error', error => checkError(error))
+            .on('request-fail', response => check(response, code))
+            .on('request-ok', response => check(response, code))
     );
 }
 //-
 function testPromise()
 {
     urls.forEach(
-        ([ code, url ]) => {
-            jfHttpRequest(
+        ([ code, url ]) => jfHttpRequest(
                 {
                     requestType : 'promise',
                     url         : url
@@ -74,7 +72,6 @@ function testPromise()
             )
             .then(response => check(response, code))
             .catch(error => checkError(error))
-        }
     );
 }
 //------------------------------------------------------------------------------

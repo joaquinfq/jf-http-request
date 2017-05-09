@@ -6,7 +6,7 @@ Simple wrapper for NodeJS HTTP request.
 
 ## Options
 
-Options      |  Type  | Description
+Option       |  Type  | Description
 -------------|--------|--------------
 auth         | string | Basic authentication i.e. `user:password` to compute an `Authorization` header.
 family       | number | IP address family to use when resolving host and hostname. Valid values are 4 or 6. When unspecified, both IP v4 and v6 will be used.
