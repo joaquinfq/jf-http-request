@@ -164,14 +164,14 @@ function doRequest(options, ok, error)
                     'end',
                     () =>
                     {
-                        let _body          = _chunks.join('');
+                        let _body          = Buffer.concat(_chunks);
                         const _contentType = new jfHttpHeaders(response.headers).get('Content-Type');
                         // application/json, application/vnd.api+json, text/json, etc.
                         if ((/[+/]json(;|$)/).test(_contentType))
                         {
                             try
                             {
-                                _body = JSON.parse(_body);
+                                _body = JSON.parse('' + _body);
                             }
                             catch (e)
                             {
