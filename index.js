@@ -112,6 +112,8 @@ function checkUrl(options)
     if (typeof _url === 'string')
     {
         Object.assign(options, urlParse(_url));
+        options.path = options.pathname;
+        delete options.pathname;
         delete options.url;
     }
     if (options.host)
