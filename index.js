@@ -14,6 +14,12 @@ const httpsRequest  = require('https').request;
  */
 const cache         = {};
 /**
+ * Tiempo por defecto de la caché.
+ *
+ * @type {Number}
+ */
+let cacheTime       = 0;
+/**
  * Propiedades de la respuesta que se serializarán.
  *
  * @type {String[]}
@@ -139,7 +145,9 @@ function checkUrl(options)
  */
 function doRequest(options, ok, error)
 {
-    const _cacheTime = options.cacheTime || 100000;
+    const _cacheTime = 'cacheTime' in options
+        ? options.cacheTime
+        : cacheTime;
     let _hash;
     let _response;
     if (_cacheTime)
@@ -374,11 +382,14 @@ module.exports.loadCache = file =>
     }
 };
 /**
+ * Asigna el tiempo de duración de los datos en caché.
+ *
+ * @param {Number} time Tiempo a asignar.
+ */
+module.exports.setCacheTime = time => cacheTime = time;
+/**
  * Carga el caché desde un archivo.
  *
  * @param {String} file Ruta del archivo del caché.
  */
-module.exports.writeCache = file =>
-{
-    fs.writeFileSync(file, JSON.stringify(cache), 'utf8');
-};
+module.exports.writeCache = file => fs.writeFileSync(file, JSON.stringify(cache), 'utf8');
