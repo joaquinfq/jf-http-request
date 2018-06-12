@@ -114,12 +114,20 @@ function checkHeaders(options)
  */
 function checkUrl(options)
 {
-    const _url = options.url;
+    let _url = options.url;
     if (typeof _url === 'string')
     {
-        Object.assign(options, urlParse(_url));
-        options.path = options.pathname;
-        delete options.pathname;
+        _url = urlParse(_url);
+        if (options.pathname)
+        {
+            _url.path = options.pathname;
+            delete options.pathname;
+        }
+        else if (_url.query)
+        {
+            _url.path += '?' + _url.query;
+        }
+        Object.assign(options, _url);
         delete options.url;
     }
     if (options.host)
@@ -239,6 +247,18 @@ function isOk(response)
     return (_code >= 200 && _code < 300) || _code === 304;
 }
 /**
+ * Verifica si la clase especificada implementa los métodos usados en las promesas.
+ *
+ * @param {Class} Class Referencia de la clase.
+ */
+function isPromise(Class)
+{
+    return typeof Class                 === 'function' &&
+           typeof Class.prototype       === 'object' &&
+           typeof Class.prototype.catch === 'function' &&
+           typeof Class.prototype.then  === 'function';
+}
+/**
  * Purga el contenido caducado del caché.
  */
 function purgeCache()
@@ -318,9 +338,11 @@ function typeEvents(options)
 /**
  * Realiza la petición usando promesas.
  *
+ * @param {Class}  Promise Clase que implementa la especificación de promesas establecida en
+ *                         la sección 25.4 de EcmaScript 6.
  * @param {Object} options Opciones usadas para realizar la petición.
  */
-function typePromise(options)
+function typePromise(Promise, options)
 {
     return new Promise(
         (resolve, reject) => doRequest(options, resolve, reject)
@@ -351,11 +373,14 @@ module.exports = function jfHttpRequest(options)
         delete options.requestType;
         if (typeof _type === 'function')
         {
-            typeCallback(options, _type);
-        }
-        else if (_type === 'promise')
-        {
-            _result = typePromise(options);
+            if (isPromise(_type))
+            {
+                _result = typePromise(_type, options);
+            }
+            else
+            {
+                typeCallback(options, _type);
+            }
         }
         else
         {

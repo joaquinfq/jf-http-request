@@ -1,5 +1,5 @@
 {
-    "version": "0.2.3",
+    "version": "1.0.0",
     "name": "jf-http-request",
     "author": "Joaquín Fernández",
     "description": "Simple wrapper for NodeJS HTTP request. Use promises, events or callbacks.",

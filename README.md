@@ -35,7 +35,7 @@ There are three types of responses:
 
 ## Request types:
 
-With parameter `requestType` you can change value returned (default: `events`).
+With parameter `requestType` you can change value returned (default: `promise`).
 
 ### Using callbacks
 
@@ -70,7 +70,12 @@ jfHttpRequest(
 const jfHttpRequest = require('jf-http-request');
 
 // events: EDP way
-jfHttpRequest('http://jsonplaceholder.typicode.com/posts/1')
+jfHttpRequest(
+        {
+            requestType : 'events',
+            url         : 'http://jsonplaceholder.typicode.com/posts/1'
+        }
+    )
     .on('request-error', error    => console.log('ERROR: %s', error.message))
     .on('request-fail',  response => console.log('FAIL : %d', response.statusCode))
     .on('request-ok',    response => console.log('OK   : %s', response.body));
@@ -81,13 +86,24 @@ jfHttpRequest('http://jsonplaceholder.typicode.com/posts/1')
 ```js
 const jfHttpRequest = require('jf-http-request');
 
-jfHttpRequest(
-        {
-            // promise: wrong way :-(
-            requestType : 'promise',
-            url         : 'http://jsonplaceholder.typicode.com/posts/1'
-        }
-    )
-    .then (response => console.log(response))       // ok & fail
-    .catch(error    => console.log(error.message)); // error
+async function doRequest(url)
+{
+    try 
+    {
+        const _response = await jfHttpRequest(
+            {
+                // Promise: async/await way
+                requestType : Promise,
+                url
+            }
+        );
+        console.log(response); // ok & fail
+    }
+    catch (error)
+    {
+        console.log(error.message); // error
+    }
+}
+
+doRequest('http://jsonplaceholder.typicode.com/posts/1');
 ```
