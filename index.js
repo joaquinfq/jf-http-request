@@ -1,9 +1,10 @@
 const crypto        = require('crypto');
 const Events        = require('events');
 const fs            = require('fs');
-const urlParse      = require('url').parse;
-const jfHttpHeaders = require('jf-http-headers');
 const http          = require('http');
+const jfHttpHeaders = require('jf-http-headers');
+const qs            = require('querystring');
+const urlParse      = require('url').parse;
 const HttpMessage   = http.IncomingMessage;
 const httpRequest   = http.request;
 const httpsRequest  = require('https').request;
@@ -108,6 +109,27 @@ function checkHeaders(options)
     }
 }
 /**
+ * Verifica los parámetros de la petición.
+ *
+ * @param {Object} options Opciones usadas para realizar la petición.
+ */
+function checkQuery(options)
+{
+    let _query = options.query;
+    if (_query)
+    {
+        const _char = options.path.includes('?')
+            ? '&'
+            : '?';
+        if (typeof _query === 'object')
+        {
+            _query = qs.stringify(_query);
+        }
+        options.path += _char + _query;
+    }
+    delete options.query;
+}
+/**
  * Verifica la URL de la petición.
  *
  * @param {Object} options Opciones usadas para realizar la petición.
@@ -122,10 +144,6 @@ function checkUrl(options)
         {
             _url.path = options.pathname;
             delete options.pathname;
-        }
-        else if (_url.query)
-        {
-            _url.path += '?' + _url.query;
         }
         Object.assign(options, _url);
         delete options.url;
@@ -143,6 +161,7 @@ function checkUrl(options)
     {
         throw new TypeError('Wrong hostname');
     }
+    checkQuery(options);
 }
 /**
  * Realiza la petición usando el módulo `http` de `NodeJS`.

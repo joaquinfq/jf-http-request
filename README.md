@@ -90,7 +90,7 @@ async function doRequest(url)
 {
     try 
     {
-        const _response = await jfHttpRequest(
+        const response = await jfHttpRequest(
             {
                 // Promise: async/await way
                 requestType : Promise,
